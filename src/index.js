@@ -10,6 +10,9 @@ const { errorHandler } = require('./middleware/errorHandler');
 
 const postRoutes = require('./routes/posts');
 const mediaRoutes = require('./routes/media');
+const engagementRoutes = require('./routes/engagement');
+const bookmarkRoutes = require('./routes/bookmarks');
+
 
 
 const app = express();
@@ -51,6 +54,8 @@ app.get('/health/ready', (req, res) => {
 // API Routes
 app.use('/api/v1/posts', postRoutes);
 app.use('/api/v1/media', mediaRoutes);
+app.use('/api/v1/engagement', engagementRoutes);
+app.use('/api/v1/bookmarks', bookmarkRoutes);
 
 // Error handling
 app.use(errorHandler);
