@@ -12,6 +12,9 @@ const postRoutes = require('./routes/posts');
 const mediaRoutes = require('./routes/media');
 const engagementRoutes = require('./routes/engagement');
 const bookmarkRoutes = require('./routes/bookmarks');
+const followRoutes = require('./routes/follow');
+const feedRoutes = require('./routes/feed');
+const reportRoutes = require('./routes/reports');
 
 
 
@@ -56,6 +59,9 @@ app.use('/api/v1/posts', postRoutes);
 app.use('/api/v1/media', mediaRoutes);
 app.use('/api/v1/engagement', engagementRoutes);
 app.use('/api/v1/bookmarks', bookmarkRoutes);
+app.use('/api/v1/follow', followRoutes);
+app.use('/api/v1/feed', feedRoutes);
+app.use('/api/v1/reports', reportRoutes);
 
 // Error handling
 app.use(errorHandler);
