@@ -3,6 +3,7 @@ const Like = require('../models/Like');
 const Comment = require('../models/Comment');
 const Share = require('../models/Share');
 const Post = require('../models/Post');
+const { createNotification } = require('./notificationController'); // ✅ NEW
 
 // ============================================
 // LIKE / UNLIKE
@@ -40,8 +41,38 @@ exports.toggleLike = async (req, res, next) => {
 
     if (targetType === 'post') {
       await Post.updateOne({ postId: targetId }, { $inc: { likeCount: 1 } });
+
+      // ✅ NEW: notify the post author (unless they liked their own post)
+      const post = await Post.findOne({ postId: targetId });
+      if (post) {
+        createNotification({
+          recipientId: post.authorId,
+          actorId: userId,
+          type: 'like',
+          targetType: 'post',
+          targetId,
+          postId: targetId,
+          message: 'liked your post',
+          preview: post.title || (post.content ? post.content.slice(0, 60) : '')
+        });
+      }
     } else {
       await Comment.updateOne({ commentId: targetId }, { $inc: { likeCount: 1 } });
+
+      // ✅ NEW: notify the comment author
+      const comment = await Comment.findOne({ commentId: targetId });
+      if (comment) {
+        createNotification({
+          recipientId: comment.authorId,
+          actorId: userId,
+          type: 'like',
+          targetType: 'comment',
+          targetId,
+          postId: comment.postId,
+          message: 'liked your comment',
+          preview: comment.content ? comment.content.slice(0, 60) : ''
+        });
+      }
     }
 
     res.status(201).json({ success: true, message: 'Liked', data: { liked: true, like } });
@@ -113,6 +144,38 @@ exports.createComment = async (req, res, next) => {
     await Post.updateOne({ postId }, { $inc: { commentCount: 1 } });
     if (parentCommentId) {
       await Comment.updateOne({ commentId: parentCommentId }, { $inc: { replyCount: 1 } });
+    }
+
+    // ✅ NEW: fire notification
+    const post = await Post.findOne({ postId });
+
+    if (parentCommentId) {
+      // This is a REPLY — notify the parent comment's author
+      const parentComment = await Comment.findOne({ commentId: parentCommentId });
+      if (parentComment) {
+        createNotification({
+          recipientId: parentComment.authorId,
+          actorId: authorId,
+          type: 'reply',
+          targetType: 'comment',
+          targetId: comment.commentId,
+          postId,
+          message: 'replied to your comment',
+          preview: content.slice(0, 60)
+        });
+      }
+    } else if (post) {
+      // This is a top-level COMMENT — notify the post author
+      createNotification({
+        recipientId: post.authorId,
+        actorId: authorId,
+        type: 'comment',
+        targetType: 'post',
+        targetId: comment.commentId,
+        postId,
+        message: 'commented on your post',
+        preview: content.slice(0, 60)
+      });
     }
 
     res.status(201).json({ success: true, message: 'Comment added', data: comment });
@@ -244,6 +307,18 @@ exports.sharePost = async (req, res, next) => {
 
     await share.save();
     await Post.updateOne({ postId }, { $inc: { shareCount: 1 } });
+
+    // ✅ NEW: notify the post author
+    createNotification({
+      recipientId: post.authorId,
+      actorId: userId,
+      type: 'share',
+      targetType: 'post',
+      targetId: postId,
+      postId,
+      message: 'shared your post',
+      preview: post.title || (post.content ? post.content.slice(0, 60) : '')
+    });
 
     res.status(201).json({ success: true, message: 'Post shared', data: share });
   } catch (error) {

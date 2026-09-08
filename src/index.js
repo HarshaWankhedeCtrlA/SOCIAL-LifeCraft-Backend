@@ -15,6 +15,7 @@ const bookmarkRoutes = require('./routes/bookmarks');
 const followRoutes = require('./routes/follow');
 const feedRoutes = require('./routes/feed');
 const reportRoutes = require('./routes/reports');
+const notificationRoutes = require('./routes/notifications');
 
 
 
@@ -62,6 +63,7 @@ app.use('/api/v1/bookmarks', bookmarkRoutes);
 app.use('/api/v1/follow', followRoutes);
 app.use('/api/v1/feed', feedRoutes);
 app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Error handling
 app.use(errorHandler);
