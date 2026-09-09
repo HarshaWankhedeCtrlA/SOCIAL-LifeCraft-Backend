@@ -1,5 +1,27 @@
 const { v4: uuidv4 } = require('uuid');
+const { getUsersByIds } = require('../utils/authServiceClient'); 
 const Post = require('../models/Post');
+
+
+async function attachAuthors(posts) {
+  if (!posts || posts.length === 0) return posts;
+  
+  const authorIds = posts.map(p => p.authorId).filter(Boolean);
+  const authorsMap = await getUsersByIds(authorIds);
+  
+  return posts.map(post => ({
+    ...post,
+    author: authorsMap[post.authorId]
+      ? {
+          id: authorsMap[post.authorId].id,
+          firstName: authorsMap[post.authorId].firstName,
+          lastName: authorsMap[post.authorId].lastName,
+          fullName: authorsMap[post.authorId].fullName,
+          avatar: authorsMap[post.authorId].avatar
+        }
+      : null
+  }));
+}
 
 // Create Post
 exports.createPost = async (req, res, next) => {
@@ -128,11 +150,11 @@ exports.getPosts = async (req, res, next) => {
         .lean(),
       Post.countDocuments(query)
     ]);
-
+const items = await attachAuthors(posts);
     res.json({
       success: true,
       data: {
-        items: posts,
+        items,
         total,
         page: parseInt(page),
         pageSize: limit,
@@ -160,10 +182,11 @@ exports.getPost = async (req, res, next) => {
     }
 
     await Post.updateOne({ _id: post._id }, { $inc: { viewCount: 1 } });
+    const [postWithAuthor] = await attachAuthors([post.toObject()]);
 
     res.json({
       success: true,
-      data: post
+      data: postWithAuthor
     });
   } catch (error) {
     next(error);

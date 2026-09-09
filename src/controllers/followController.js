@@ -1,5 +1,45 @@
+const { getUsersByIds } = require('../utils/authServiceClient');
 const { v4: uuidv4 } = require('uuid');
 const Follow = require('../models/Follow');
+
+
+async function attachUserInfo(items, userIdField) {
+  if (!items || items.length === 0) return items;
+  
+  const userIds = items.map(item => item[userIdField]).filter(Boolean);
+  const usersMap = await getUsersByIds(userIds);
+  
+  return items.map(item => ({
+    ...item,
+    user: usersMap[item[userIdField]]
+      ? {
+          id: usersMap[item[userIdField]].id,
+          firstName: usersMap[item[userIdField]].firstName,
+          lastName: usersMap[item[userIdField]].lastName,
+          fullName: usersMap[item[userIdField]].fullName,
+          avatar: usersMap[item[userIdField]].avatar
+        }
+      : null
+  }));
+}
+
+async function attachFollowStatus(items, currentUserId, userIdField) {
+  if (!items || items.length === 0 || !currentUserId) return items;
+  
+  const userIds = items.map(item => item[userIdField]).filter(Boolean);
+  const follows = await Follow.find({
+    followerId: currentUserId,
+    followingId: { $in: userIds }
+  }).lean();
+  
+  const followingSet = new Set(follows.map(f => f.followingId));
+  
+  return items.map(item => ({
+    ...item,
+    isFollowedByCurrentUser: followingSet.has(item[userIdField])
+  }));
+}
+
 
 // ============================================
 // TOGGLE FOLLOW (follow / unfollow)
@@ -68,6 +108,7 @@ exports.toggleFollow = async (req, res, next) => {
 exports.getFollowers = async (req, res, next) => {
   try {
     const { userId } = req.params;
+    const currentUserId = req.user.id;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
     const limit = parseInt(pageSize);
@@ -80,10 +121,13 @@ exports.getFollowers = async (req, res, next) => {
         .lean(),
       Follow.countDocuments({ followingId: userId })
     ]);
+  let items = await attachUserInfo(followers, 'followerId');
+    
+    items = await attachFollowStatus(items, currentUserId, 'followerId');
 
     res.json({
       success: true,
-      data: { items: followers, total, page: parseInt(page), pageSize: limit, totalPages: Math.ceil(total / limit) }
+      data: { items, total, page: parseInt(page), pageSize: limit, totalPages: Math.ceil(total / limit) }
     });
 
   } catch (error) {
@@ -97,6 +141,7 @@ exports.getFollowers = async (req, res, next) => {
 exports.getFollowing = async (req, res, next) => {
   try {
     const { userId } = req.params;
+     const currentUserId = req.user.id; 
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
     const limit = parseInt(pageSize);
@@ -109,10 +154,13 @@ exports.getFollowing = async (req, res, next) => {
         .lean(),
       Follow.countDocuments({ followerId: userId })
     ]);
+    let items = await attachUserInfo(following, 'followingId');
+    
+    items = await attachFollowStatus(items, currentUserId, 'followingId');
 
     res.json({
       success: true,
-      data: { items: following, total, page: parseInt(page), pageSize: limit, totalPages: Math.ceil(total / limit) }
+      data: { items, total, page: parseInt(page), pageSize: limit, totalPages: Math.ceil(total / limit) }
     });
 
   } catch (error) {

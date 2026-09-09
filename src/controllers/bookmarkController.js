@@ -1,6 +1,40 @@
 const { v4: uuidv4 } = require('uuid');
+const { getUsersByIds } = require('../utils/authServiceClient'); 
 const Bookmark = require('../models/Bookmark');
 const Post = require('../models/Post');
+
+async function attachPostAuthors(bookmarks) {
+  if (!bookmarks || bookmarks.length === 0) return bookmarks;
+  
+  // Get all posts from bookmarks
+  const postIds = bookmarks.map(b => b.postId);
+  const posts = await Post.find({ postId: { $in: postIds } }).lean();
+  
+  // Get all author IDs from posts
+  const authorIds = posts.map(p => p.authorId).filter(Boolean);
+  const authorsMap = await getUsersByIds(authorIds);
+  
+  // Build post map with author info
+  const postMap = posts.reduce((acc, post) => {
+    acc[post.postId] = {
+      ...post,
+      author: authorsMap[post.authorId]
+        ? {
+            firstName: authorsMap[post.authorId].firstName,
+            lastName: authorsMap[post.authorId].lastName,
+            fullName: authorsMap[post.authorId].fullName,
+            avatar: authorsMap[post.authorId].avatar
+          }
+        : null
+    };
+    return acc;
+  }, {});
+  
+  return bookmarks.map(bookmark => ({
+    ...bookmark,
+    post: postMap[bookmark.postId] || null
+  }));
+}
 
 // ============================================
 // TOGGLE BOOKMARK (save / unsave)
@@ -90,18 +124,7 @@ exports.getUserBookmarks = async (req, res, next) => {
       Bookmark.countDocuments(query)
     ]);
 
-    // Fetch the actual posts for these bookmarks
-    const postIds = bookmarks.map(b => b.postId);
-    const posts = await Post.find({ postId: { $in: postIds } }).lean();
-    const postMap = posts.reduce((acc, p) => {
-      acc[p.postId] = p;
-      return acc;
-    }, {});
-
-    const items = bookmarks.map(b => ({
-      ...b,
-      post: postMap[b.postId] || null
-    }));
+       const items = await attachPostAuthors(bookmarks);
 
     res.json({
       success: true,

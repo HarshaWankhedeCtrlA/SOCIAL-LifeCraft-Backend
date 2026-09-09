@@ -1,3 +1,4 @@
+const { getUsersByIds } = require('../utils/authServiceClient');
 const { v4: uuidv4 } = require('uuid');
 const Notification = require('../models/Notification');
 
@@ -52,10 +53,26 @@ exports.getMyNotifications = async (req, res, next) => {
       Notification.countDocuments({ recipientId, isRead: false })
     ]);
 
+    // ✅ NEW: batch fetch actor names from auth-service in ONE call
+    const actorIds = notifications.map(n => n.actorId);
+    const actorsMap = await getUsersByIds(actorIds);
+
+    const enrichedNotifications = notifications.map(n => ({
+      ...n,
+      actor: actorsMap[n.actorId]
+        ? {
+            firstName: actorsMap[n.actorId].firstName,
+            lastName: actorsMap[n.actorId].lastName,
+            fullName: actorsMap[n.actorId].fullName,
+            avatar: actorsMap[n.actorId].avatar
+          }
+        : null
+    }));
+
     res.json({
       success: true,
       data: {
-        items: notifications,
+        items: enrichedNotifications,
         total,
         page: parseInt(page),
         pageSize: limit,

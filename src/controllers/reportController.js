@@ -1,8 +1,41 @@
 const { v4: uuidv4 } = require('uuid');
+const { getUsersByIds } = require('../utils/authServiceClient');
 const Report = require('../models/Report');
 const { REPORT_REASONS } = require('../models/Report');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
+
+async function attachReportUsers(reports) {
+  if (!reports || reports.length === 0) return reports;
+  
+  const reporterIds = reports.map(r => r.reporterId).filter(Boolean);
+  const targetAuthorIds = reports.map(r => r.targetAuthorId).filter(Boolean);
+  
+  const allUserIds = [...new Set([...reporterIds, ...targetAuthorIds])];
+  const usersMap = await getUsersByIds(allUserIds);
+  
+  return reports.map(report => ({
+    ...report,
+    reporter: usersMap[report.reporterId]
+      ? {
+          id: usersMap[report.reporterId].id,
+          firstName: usersMap[report.reporterId].firstName,
+          lastName: usersMap[report.reporterId].lastName,
+          fullName: usersMap[report.reporterId].fullName,
+          avatar: usersMap[report.reporterId].avatar
+        }
+      : null,
+    targetAuthor: usersMap[report.targetAuthorId]
+      ? {
+          id: usersMap[report.targetAuthorId].id,
+          firstName: usersMap[report.targetAuthorId].firstName,
+          lastName: usersMap[report.targetAuthorId].lastName,
+          fullName: usersMap[report.targetAuthorId].fullName,
+          avatar: usersMap[report.targetAuthorId].avatar
+        }
+      : null
+  }));
+}
 
 // ============================================
 // CREATE REPORT (report a post or comment)
@@ -132,10 +165,10 @@ exports.getAllReports = async (req, res, next) => {
       Report.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Report.countDocuments(query)
     ]);
-
+const items = await attachReportUsers(reports);
     res.json({
       success: true,
-      data: { items: reports, total, page: parseInt(page), pageSize: limit, totalPages: Math.ceil(total / limit) }
+      data: { items, total, page: parseInt(page), pageSize: limit, totalPages: Math.ceil(total / limit) }
     });
 
   } catch (error) {

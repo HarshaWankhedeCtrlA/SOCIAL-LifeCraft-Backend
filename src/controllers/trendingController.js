@@ -1,4 +1,24 @@
 const Post = require('../models/Post');
+const { getUsersByIds } = require('../utils/authServiceClient');
+async function attachAuthors(posts) {
+  if (!posts || posts.length === 0) return posts;
+  
+  const authorIds = posts.map(p => p.authorId).filter(Boolean);
+  const authorsMap = await getUsersByIds(authorIds);
+  
+  return posts.map(post => ({
+    ...post,
+    author: authorsMap[post.authorId]
+      ? {
+          id: authorsMap[post.authorId].id,
+          firstName: authorsMap[post.authorId].firstName,
+          lastName: authorsMap[post.authorId].lastName,
+          fullName: authorsMap[post.authorId].fullName,
+          avatar: authorsMap[post.authorId].avatar
+        }
+      : null
+  }));
+}
 
 // ============================================
 // GET TRENDING POSTS
@@ -53,7 +73,8 @@ exports.getTrendingPosts = async (req, res, next) => {
     withEngagement.sort((a, b) => b.trendingScore - a.trendingScore);
 
     const total = withEngagement.length;
-    const items = withEngagement.slice(skip, skip + limit);
+    const pageItems = withEngagement.slice(skip, skip + limit);
+    const items = await attachAuthors(pageItems);
 
     res.json({
       success: true,

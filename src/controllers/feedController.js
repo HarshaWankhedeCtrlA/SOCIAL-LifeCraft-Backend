@@ -1,3 +1,4 @@
+const { getUsersByIds } = require('../utils/authServiceClient');
 const Post = require('../models/Post');
 const Like = require('../models/Like');
 const Comment = require('../models/Comment');
@@ -34,6 +35,26 @@ async function deriveInterestTags(userId, limit = 10) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([tag]) => tag);
+}
+
+// ============================================
+// HELPER: attach author info to a list of posts
+// ============================================
+async function attachAuthors(posts) {
+  const authorIds = posts.map(p => p.authorId);
+  const authorsMap = await getUsersByIds(authorIds);
+
+  return posts.map(post => ({
+    ...post,
+    author: authorsMap[post.authorId]
+      ? {
+          firstName: authorsMap[post.authorId].firstName,
+          lastName: authorsMap[post.authorId].lastName,
+          fullName: authorsMap[post.authorId].fullName,
+          avatar: authorsMap[post.authorId].avatar
+        }
+      : null
+  }));
 }
 
 // ============================================
@@ -87,7 +108,6 @@ exports.getPersonalizedFeed = async (req, res, next) => {
 
       if (post.isPinned) score += 20;
       if (post.isAnnouncement) score += 15;
-
       if (followingIds.includes(post.authorId)) score += 25;
 
       return { ...post, feedScore: Math.round(score * 100) / 100 };
@@ -95,7 +115,10 @@ exports.getPersonalizedFeed = async (req, res, next) => {
 
     scored.sort((a, b) => b.feedScore - a.feedScore);
     const total = scored.length;
-    const items = scored.slice(skip, skip + limit);
+    const pageItems = scored.slice(skip, skip + limit);
+
+    // ✅ enrich just this page's posts with author info
+    const items = await attachAuthors(pageItems);
 
     res.json({
       success: true,
@@ -139,10 +162,13 @@ exports.getFollowingFeed = async (req, res, next) => {
       authorId: { $in: followingIds }
     };
 
-    const [items, total] = await Promise.all([
+    const [pageItems, total] = await Promise.all([
       Post.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Post.countDocuments(query)
     ]);
+
+    // ✅ enrich with author info
+    const items = await attachAuthors(pageItems);
 
     res.json({
       success: true,

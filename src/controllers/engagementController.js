@@ -1,9 +1,30 @@
 const { v4: uuidv4 } = require('uuid');
+const { getUsersByIds } = require('../utils/authServiceClient');
 const Like = require('../models/Like');
 const Comment = require('../models/Comment');
 const Share = require('../models/Share');
 const Post = require('../models/Post');
 const { createNotification } = require('./notificationController'); // ✅ NEW
+
+
+async function attachActors(items, userIdField = 'userId') {
+  if (!items || items.length === 0) return items;
+  
+  const userIds = items.map(item => item[userIdField]).filter(Boolean);
+  const usersMap = await getUsersByIds(userIds);
+  
+  return items.map(item => ({
+    ...item,
+    actor: usersMap[item[userIdField]]
+      ? {
+          firstName: usersMap[item[userIdField]].firstName,
+          lastName: usersMap[item[userIdField]].lastName,
+          fullName: usersMap[item[userIdField]].fullName,
+          avatar: usersMap[item[userIdField]].avatar
+        }
+      : null
+  }));
+}
 
 // ============================================
 // LIKE / UNLIKE
@@ -95,8 +116,9 @@ exports.getLikes = async (req, res, next) => {
       Like.find({ targetType, targetId }).sort({ createdAt: -1 }).skip(skip).limit(parseInt(pageSize)).lean(),
       Like.countDocuments({ targetType, targetId })
     ]);
+    const items = await attachActors(likes, 'userId');
 
-    res.json({ success: true, data: { items: likes, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
+    res.json({ success: true, data: { items, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
   } catch (error) {
     next(error);
   }
@@ -199,8 +221,8 @@ exports.getComments = async (req, res, next) => {
         .lean(),
       Comment.countDocuments({ postId, parentCommentId: null, status: 'active' })
     ]);
-
-    res.json({ success: true, data: { items: comments, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
+ const items = await attachActors(comments, 'authorId');
+    res.json({ success: true, data: { items, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
   } catch (error) {
     next(error);
   }
@@ -221,8 +243,8 @@ exports.getReplies = async (req, res, next) => {
         .lean(),
       Comment.countDocuments({ parentCommentId: commentId, status: 'active' })
     ]);
-
-    res.json({ success: true, data: { items: replies, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
+ const items = await attachActors(replies, 'authorId');
+    res.json({ success: true, data: { items, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
   } catch (error) {
     next(error);
   }
@@ -336,8 +358,8 @@ exports.getShares = async (req, res, next) => {
       Share.find({ postId }).sort({ createdAt: -1 }).skip(skip).limit(parseInt(pageSize)).lean(),
       Share.countDocuments({ postId })
     ]);
-
-    res.json({ success: true, data: { items: shares, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
+const items = await attachActors(shares, 'userId');
+    res.json({ success: true, data: { items, total, page: parseInt(page), pageSize: parseInt(pageSize) } });
   } catch (error) {
     next(error);
   }
