@@ -1,4 +1,6 @@
+'use strict'; 
 const mongoose = require('mongoose');
+const { getSocialDB } = require('../config/db');
 
 const MediaSchema = new mongoose.Schema({
   // ✅ Core identifiers
@@ -95,4 +97,14 @@ MediaSchema.index({ postId: 1 });
 MediaSchema.index({ fileType: 1 });
 MediaSchema.index({ status: 1 });
 
-module.exports = mongoose.model('Media', MediaSchema);
+let Media;
+
+function getMediaModel() {
+  if (!Media) {
+    const conn = getSocialDB();
+    Media = conn.model('Media', MediaSchema);
+  }
+  return Media;
+}
+
+module.exports = getMediaModel;

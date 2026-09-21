@@ -1,9 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
 const { getUsersByIds } = require('../utils/authServiceClient');
-const Like = require('../models/Like');
-const Comment = require('../models/Comment');
-const Share = require('../models/Share');
-const Post = require('../models/Post');
+const getLikeModel = require('../models/Like');
+const getCommentModel  = require('../models/Comment');
+const getShareModel = require('../models/Share');
+const getPostModel  = require('../models/Post');
 const { createNotification } = require('./notificationController'); // ✅ NEW
 
 
@@ -31,6 +31,9 @@ async function attachActors(items, userIdField = 'userId') {
 // ============================================
 exports.toggleLike = async (req, res, next) => {
   try {
+    const Like = getLikeModel();         
+    const Post = getPostModel();          
+    const Comment = getCommentModel();
     const userId = req.user.id;
     const { targetType, targetId, postId } = req.body;
 
@@ -108,6 +111,7 @@ exports.toggleLike = async (req, res, next) => {
 // Get likes for a target (who liked it)
 exports.getLikes = async (req, res, next) => {
   try {
+        const Like = getLikeModel();          
     const { targetType, targetId } = req.query;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -129,6 +133,8 @@ exports.getLikes = async (req, res, next) => {
 // ============================================
 exports.createComment = async (req, res, next) => {
   try {
+     const Comment = getCommentModel();    
+    const Post = getPostModel();  
     const authorId = req.user.id;
     const { postId, content, parentCommentId } = req.body;
 
@@ -209,6 +215,7 @@ exports.createComment = async (req, res, next) => {
 // Get top-level comments for a post
 exports.getComments = async (req, res, next) => {
   try {
+    const Comment = getCommentModel();
     const { postId } = req.params;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -231,6 +238,7 @@ exports.getComments = async (req, res, next) => {
 // Get replies for a specific comment (nested thread)
 exports.getReplies = async (req, res, next) => {
   try {
+    const Comment = getCommentModel();  
     const { commentId } = req.params;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -252,6 +260,7 @@ exports.getReplies = async (req, res, next) => {
 
 exports.updateComment = async (req, res, next) => {
   try {
+    const Comment = getCommentModel();
     const { id } = req.params;
     const { content } = req.body;
     const userId = req.user.id;
@@ -275,6 +284,8 @@ exports.updateComment = async (req, res, next) => {
 
 exports.deleteComment = async (req, res, next) => {
   try {
+     const Comment = getCommentModel();    
+    const Post = getPostModel();  
     const { id } = req.params;
     const userId = req.user.id;
 
@@ -305,6 +316,8 @@ exports.deleteComment = async (req, res, next) => {
 // ============================================
 exports.sharePost = async (req, res, next) => {
   try {
+    const Share = getShareModel();        
+    const Post = getPostModel();  
     const userId = req.user.id;
     const { postId, shareType, targetCommunityId, message, platform } = req.body;
 
@@ -350,6 +363,7 @@ exports.sharePost = async (req, res, next) => {
 
 exports.getShares = async (req, res, next) => {
   try {
+    const Share = getShareModel(); 
     const { postId } = req.params;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);

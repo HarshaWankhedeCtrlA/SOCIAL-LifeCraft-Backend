@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getSocialDB } = require('../config/db');   
 
 const LikeSchema = new mongoose.Schema({
   likeId: { type: String, required: true, unique: true, index: true },
@@ -23,5 +24,14 @@ const LikeSchema = new mongoose.Schema({
 
 // Prevent duplicate likes by same user on same target
 LikeSchema.index({ userId: 1, targetType: 1, targetId: 1 }, { unique: true });
+let Like;
 
-module.exports = mongoose.model('Like', LikeSchema);
+function getLikeModel() {
+  if (!Like) {
+    const conn = getSocialDB();
+    Like = conn.model('Like', LikeSchema);
+  }
+  return Like;
+}
+
+module.exports = getLikeModel;

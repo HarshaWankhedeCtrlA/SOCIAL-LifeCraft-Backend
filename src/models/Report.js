@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getSocialDB } = require('../config/db');
 
 const REPORT_REASONS = Object.freeze([
   'spam',
@@ -64,6 +65,15 @@ const ReportSchema = new mongoose.Schema({
 // Prevent the same user from spamming reports on the same content
 ReportSchema.index({ reporterId: 1, targetType: 1, targetId: 1 }, { unique: true });
 ReportSchema.index({ status: 1, createdAt: -1 });
+let Report;
 
-module.exports = mongoose.model('Report', ReportSchema);
+function getReportModel() {
+  if (!Report) {
+    const conn = getSocialDB();
+    Report = conn.model('Report', ReportSchema);
+  }
+  return Report;
+}
+
+module.exports = getReportModel;
 module.exports.REPORT_REASONS = REPORT_REASONS;

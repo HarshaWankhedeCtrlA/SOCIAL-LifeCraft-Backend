@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 
-const connectDB = require('./config/db');
+const { connectDB } = require('./config/db');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const postRoutes = require('./routes/posts');
@@ -17,10 +17,10 @@ const feedRoutes = require('./routes/feed');
 const reportRoutes = require('./routes/reports');
 const notificationRoutes = require('./routes/notifications');
 const trendingRoutes = require('./routes/trending');
+const masterRoutes = require('./routes/master.routes');
 
 const app = express();
-
-connectDB();
+ connectDB();
 
 app.use(helmet());
 app.use(cors());
@@ -64,6 +64,7 @@ app.use('/api/v1/feed', feedRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/trending', trendingRoutes);
+app.use('/api/v1', masterRoutes);
 
 // Error handling
 app.use(errorHandler);

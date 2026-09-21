@@ -1,4 +1,4 @@
-const Post = require('../models/Post');
+const getPostModel  = require('../models/Post');
 const { getUsersByIds } = require('../utils/authServiceClient');
 async function attachAuthors(posts) {
   if (!posts || posts.length === 0) return posts;
@@ -27,6 +27,7 @@ async function attachAuthors(posts) {
 // ============================================
 exports.getTrendingPosts = async (req, res, next) => {
   try {
+     const Post = getPostModel();
     const { page = 1, pageSize = 20, window = '7d' } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
     const limit = parseInt(pageSize);
@@ -99,6 +100,7 @@ exports.getTrendingPosts = async (req, res, next) => {
 // ============================================
 exports.getTrendingTags = async (req, res, next) => {
   try {
+    const Post = getPostModel(); 
     const { window = '7d', limit = 10 } = req.query;
 
     const windowHoursMap = { '24h': 24, '7d': 168, '30d': 720 };

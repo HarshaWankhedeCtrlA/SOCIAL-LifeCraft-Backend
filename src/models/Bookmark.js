@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const { getSocialDB } = require('../config/db');
 const BookmarkSchema = new mongoose.Schema({
   bookmarkId: { type: String, required: true, unique: true, index: true },
   userId: { type: String, required: true, index: true },
@@ -22,4 +22,14 @@ const BookmarkSchema = new mongoose.Schema({
 // A user can only bookmark the same post once
 BookmarkSchema.index({ userId: 1, postId: 1 }, { unique: true });
 
-module.exports = mongoose.model('Bookmark', BookmarkSchema);
+let Bookmark;
+
+function getBookmarkModel() {
+  if (!Bookmark) {
+    const conn = getSocialDB();
+    Bookmark = conn.model('Bookmark', BookmarkSchema);
+  }
+  return Bookmark;
+}
+
+module.exports = getBookmarkModel;

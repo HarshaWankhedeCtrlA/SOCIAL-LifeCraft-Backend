@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getSocialDB } = require('../config/db');
 
 const FollowSchema = new mongoose.Schema({
   followId: { type: String, required: true, unique: true, index: true },
@@ -27,5 +28,14 @@ const FollowSchema = new mongoose.Schema({
 
 // A user can only follow the same person once
 FollowSchema.index({ followerId: 1, followingId: 1 }, { unique: true });
+let Follow;
 
-module.exports = mongoose.model('Follow', FollowSchema);
+function getFollowModel() {
+  if (!Follow) {
+    const conn = getSocialDB();
+    Follow = conn.model('Follow', FollowSchema);
+  }
+  return Follow;
+}
+
+module.exports = getFollowModel;

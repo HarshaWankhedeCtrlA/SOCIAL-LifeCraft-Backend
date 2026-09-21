@@ -1,6 +1,6 @@
 const { getUsersByIds } = require('../utils/authServiceClient');
 const { v4: uuidv4 } = require('uuid');
-const Notification = require('../models/Notification');
+const getNotificationModel = require('../models/Notification');
 
 // ============================================
 // INTERNAL HELPER — called from engagementController
@@ -8,6 +8,7 @@ const Notification = require('../models/Notification');
 // ============================================
 exports.createNotification = async ({ recipientId, actorId, type, targetType, targetId, postId, message, preview }) => {
   try {
+    const Notification = getNotificationModel();  
     // Don't notify users about their own actions
     if (recipientId === actorId) return null;
 
@@ -37,6 +38,7 @@ exports.createNotification = async ({ recipientId, actorId, type, targetType, ta
 // ============================================
 exports.getMyNotifications = async (req, res, next) => {
   try {
+     const Notification = getNotificationModel(); 
     const recipientId = req.user.id;
     const { type, isRead, page = 1, pageSize = 20 } = req.query;
 
@@ -91,6 +93,7 @@ exports.getMyNotifications = async (req, res, next) => {
 // ============================================
 exports.getUnreadCount = async (req, res, next) => {
   try {
+     const Notification = getNotificationModel();   
     const recipientId = req.user.id;
     const unreadCount = await Notification.countDocuments({ recipientId, isRead: false });
 
@@ -106,6 +109,7 @@ exports.getUnreadCount = async (req, res, next) => {
 // ============================================
 exports.markAsRead = async (req, res, next) => {
   try {
+    const Notification = getNotificationModel(); 
     const { id } = req.params;
     const recipientId = req.user.id;
 
@@ -141,6 +145,7 @@ exports.markAsRead = async (req, res, next) => {
 // ============================================
 exports.markAllAsRead = async (req, res, next) => {
   try {
+     const Notification = getNotificationModel();
     const recipientId = req.user.id;
 
     await Notification.updateMany(
@@ -160,6 +165,7 @@ exports.markAllAsRead = async (req, res, next) => {
 // ============================================
 exports.deleteNotification = async (req, res, next) => {
   try {
+    const Notification = getNotificationModel(); 
     const { id } = req.params;
     const recipientId = req.user.id;
 

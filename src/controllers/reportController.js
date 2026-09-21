@@ -1,9 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
 const { getUsersByIds } = require('../utils/authServiceClient');
-const Report = require('../models/Report');
+const getReportModel = require('../models/Report');
 const { REPORT_REASONS } = require('../models/Report');
-const Post = require('../models/Post');
-const Comment = require('../models/Comment');
+const getPostModel = require('../models/Post');
+const getCommentModel  = require('../models/Comment');
 
 async function attachReportUsers(reports) {
   if (!reports || reports.length === 0) return reports;
@@ -42,6 +42,9 @@ async function attachReportUsers(reports) {
 // ============================================
 exports.createReport = async (req, res, next) => {
   try {
+     const Report = getReportModel();
+    const Post = getPostModel();
+    const Comment = getCommentModel();
     const reporterId = req.user.id;
     const { targetType, targetId, reason, description } = req.body;
 
@@ -126,6 +129,7 @@ exports.createReport = async (req, res, next) => {
 // ============================================
 exports.getMyReports = async (req, res, next) => {
   try {
+    const Report = getReportModel();
     const reporterId = req.user.id;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -151,6 +155,7 @@ exports.getMyReports = async (req, res, next) => {
 // ============================================
 exports.getAllReports = async (req, res, next) => {
   try {
+    const Report = getReportModel();
     const { status, targetType, reason, page = 1, pageSize = 20 } = req.query;
 
     const query = {};
@@ -181,6 +186,9 @@ const items = await attachReportUsers(reports);
 // ============================================
 exports.reviewReport = async (req, res, next) => {
   try {
+    const Report = getReportModel();
+    const Post = getPostModel();
+    const Comment = getCommentModel();
     const { id } = req.params;
     const moderatorId = req.user.id;
     const { status, moderatorNotes, actionTaken } = req.body;
@@ -237,6 +245,7 @@ exports.reviewReport = async (req, res, next) => {
 // ============================================
 exports.getReportCount = async (req, res, next) => {
   try {
+    const Report = getReportModel();
     const { targetType, targetId } = req.params;
 
     const count = await Report.countDocuments({ targetType, targetId });

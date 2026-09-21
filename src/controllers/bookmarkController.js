@@ -1,11 +1,13 @@
 const { v4: uuidv4 } = require('uuid');
 const { getUsersByIds } = require('../utils/authServiceClient'); 
-const Bookmark = require('../models/Bookmark');
-const Post = require('../models/Post');
+const getBookmarkModel  = require('../models/Bookmark');
+const getPostModel  = require('../models/Post');
 
 async function attachPostAuthors(bookmarks) {
   if (!bookmarks || bookmarks.length === 0) return bookmarks;
   
+   const Post = getPostModel();  
+
   // Get all posts from bookmarks
   const postIds = bookmarks.map(b => b.postId);
   const posts = await Post.find({ postId: { $in: postIds } }).lean();
@@ -41,6 +43,8 @@ async function attachPostAuthors(bookmarks) {
 // ============================================
 exports.toggleBookmark = async (req, res, next) => {
   try {
+    const Bookmark = getBookmarkModel();
+       const Post = getPostModel();  
     const userId = req.user.id;
     const { postId, collectionName } = req.body;
 
@@ -106,6 +110,7 @@ exports.toggleBookmark = async (req, res, next) => {
 // ============================================
 exports.getUserBookmarks = async (req, res, next) => {
   try {
+    const Bookmark = getBookmarkModel();  
     const userId = req.user.id;
     const { collectionName, page = 1, pageSize = 20 } = req.query;
 
@@ -147,6 +152,7 @@ exports.getUserBookmarks = async (req, res, next) => {
 // ============================================
 exports.checkBookmark = async (req, res, next) => {
   try {
+     const Bookmark = getBookmarkModel();   
     const userId = req.user.id;
     const { postId } = req.params;
 
@@ -167,6 +173,8 @@ exports.checkBookmark = async (req, res, next) => {
 // ============================================
 exports.deleteBookmark = async (req, res, next) => {
   try {
+    const Bookmark = getBookmarkModel();    
+    const Post = getPostModel();  
     const { id } = req.params;
     const userId = req.user.id;
 

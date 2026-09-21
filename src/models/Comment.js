@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const { getSocialDB } = require('../config/db');
 const CommentSchema = new mongoose.Schema({
   commentId: { type: String, required: true, unique: true, index: true },
   postId: { type: String, required: true, index: true },
@@ -33,5 +33,14 @@ const CommentSchema = new mongoose.Schema({
 });
 
 CommentSchema.index({ postId: 1, parentCommentId: 1, createdAt: -1 });
+let Comment;
 
-module.exports = mongoose.model('Comment', CommentSchema);
+function getCommentModel() {
+  if (!Comment) {
+    const conn = getSocialDB();
+    Comment = conn.model('Comment', CommentSchema);
+  }
+  return Comment;
+}
+
+module.exports = getCommentModel;

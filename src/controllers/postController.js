@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { getUsersByIds } = require('../utils/authServiceClient'); 
-const Post = require('../models/Post');
+const getPostModel  = require('../models/Post');
 
 
 async function attachAuthors(posts) {
@@ -26,6 +26,7 @@ async function attachAuthors(posts) {
 // Create Post
 exports.createPost = async (req, res, next) => {
   try {
+    const Post = getPostModel(); 
     const { 
       communityId, 
       title, 
@@ -110,6 +111,7 @@ exports.createPost = async (req, res, next) => {
 // Get Posts
 exports.getPosts = async (req, res, next) => {
   try {
+    const Post = getPostModel(); 
     const { 
       communityId, 
       authorId, 
@@ -169,6 +171,7 @@ const items = await attachAuthors(posts);
 // Get Single Post
 exports.getPost = async (req, res, next) => {
   try {
+    const Post = getPostModel(); 
     const { id } = req.params;
     const post = await Post.findOne({ postId: id });
     if (!post) {
@@ -196,6 +199,7 @@ exports.getPost = async (req, res, next) => {
 // Update Post
 exports.updatePost = async (req, res, next) => {
   try {
+    const Post = getPostModel(); 
     const { id } = req.params;
     const { title, content, tags, category, visibility, isPinned, isAnnouncement , media,
     coverImage    } = req.body;
@@ -252,6 +256,7 @@ exports.updatePost = async (req, res, next) => {
 // Delete Post
 exports.deletePost = async (req, res, next) => {
   try {
+    const Post = getPostModel(); 
     const { id } = req.params;
     const userId = req.user.id;
 

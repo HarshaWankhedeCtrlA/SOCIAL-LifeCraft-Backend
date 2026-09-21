@@ -1,6 +1,6 @@
 const { getUsersByIds } = require('../utils/authServiceClient');
 const { v4: uuidv4 } = require('uuid');
-const Follow = require('../models/Follow');
+const getFollowModel = require('../models/Follow');
 
 
 async function attachUserInfo(items, userIdField) {
@@ -25,7 +25,7 @@ async function attachUserInfo(items, userIdField) {
 
 async function attachFollowStatus(items, currentUserId, userIdField) {
   if (!items || items.length === 0 || !currentUserId) return items;
-  
+   const Follow = getFollowModel();
   const userIds = items.map(item => item[userIdField]).filter(Boolean);
   const follows = await Follow.find({
     followerId: currentUserId,
@@ -46,6 +46,7 @@ async function attachFollowStatus(items, currentUserId, userIdField) {
 // ============================================
 exports.toggleFollow = async (req, res, next) => {
   try {
+    const Follow = getFollowModel(); 
     const followerId = req.user.id;
     const { followingId, targetType } = req.body;
 
@@ -107,6 +108,7 @@ exports.toggleFollow = async (req, res, next) => {
 // ============================================
 exports.getFollowers = async (req, res, next) => {
   try {
+    const Follow = getFollowModel(); 
     const { userId } = req.params;
     const currentUserId = req.user.id;
     const { page = 1, pageSize = 20 } = req.query;
@@ -140,6 +142,7 @@ exports.getFollowers = async (req, res, next) => {
 // ============================================
 exports.getFollowing = async (req, res, next) => {
   try {
+    const Follow = getFollowModel(); 
     const { userId } = req.params;
      const currentUserId = req.user.id; 
     const { page = 1, pageSize = 20 } = req.query;
@@ -173,6 +176,7 @@ exports.getFollowing = async (req, res, next) => {
 // ============================================
 exports.checkFollow = async (req, res, next) => {
   try {
+    const Follow = getFollowModel(); 
     const followerId = req.user.id;
     const { followingId } = req.params;
 
@@ -193,6 +197,7 @@ exports.checkFollow = async (req, res, next) => {
 // ============================================
 exports.getFollowCounts = async (req, res, next) => {
   try {
+    const Follow = getFollowModel(); 
     const { userId } = req.params;
 
     const [followersCount, followingCount] = await Promise.all([

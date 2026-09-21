@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const { getSocialDB } = require('../config/db'); 
 // Denormalized cache of which tags a user engages with most.
 const UserInterestSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true, index: true },
@@ -13,4 +13,14 @@ const UserInterestSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('UserInterest', UserInterestSchema);
+let UserInterest;                                       
+
+function getUserInterestModel() {                       
+  if (!UserInterest) {
+    const conn = getSocialDB();
+    UserInterest = conn.model('UserInterest', UserInterestSchema);
+  }
+  return UserInterest;
+}
+
+module.exports = getUserInterestModel;  

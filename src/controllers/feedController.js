@@ -1,15 +1,19 @@
 const { getUsersByIds } = require('../utils/authServiceClient');
-const Post = require('../models/Post');
-const Like = require('../models/Like');
-const Comment = require('../models/Comment');
-const Bookmark = require('../models/Bookmark');
-const Follow = require('../models/Follow');
-const UserInterest = require('../models/UserInterest');
+const getPostModel  = require('../models/Post');
+const getLikeModel  = require('../models/Like');
+const getCommentModel = require('../models/Comment');
+const getBookmarkModel  = require('../models/Bookmark');
+const getFollowModel  = require('../models/Follow');
+const getUserInterestModel  = require('../models/UserInterest');
 
 // ============================================
 // HELPER: derive user's top interest tags on the fly
 // ============================================
 async function deriveInterestTags(userId, limit = 10) {
+  const Like = getLikeModel();              
+  const Comment = getCommentModel();         
+  const Bookmark = getBookmarkModel();       
+  const Post = getPostModel(); 
   const [likedPostIds, commentedPostIds, savedPostIds] = await Promise.all([
     Like.find({ userId, targetType: 'post' }).distinct('targetId'),
     Comment.find({ authorId: userId }).distinct('postId'),
@@ -62,6 +66,9 @@ async function attachAuthors(posts) {
 // ============================================
 exports.getPersonalizedFeed = async (req, res, next) => {
   try {
+    const UserInterest = getUserInterestModel();   
+    const Follow = getFollowModel();               
+    const Post = getPostModel();  
     const userId = req.user.id;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -142,6 +149,8 @@ exports.getPersonalizedFeed = async (req, res, next) => {
 // ============================================
 exports.getFollowingFeed = async (req, res, next) => {
   try {
+    const Follow = getFollowModel();               
+    const Post = getPostModel();  
     const userId = req.user.id;
     const { page = 1, pageSize = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(pageSize);
@@ -185,6 +194,8 @@ exports.getFollowingFeed = async (req, res, next) => {
 // ============================================
 exports.recordInterest = async (userId, postId) => {
   try {
+     const Post = getPostModel();                   
+    const UserInterest = getUserInterestModel(); 
     const post = await Post.findOne({ postId }, { tags: 1, category: 1 }).lean();
     if (!post) return;
 

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getSocialDB } = require('../config/db');
 
 const ShareSchema = new mongoose.Schema({
   shareId: { type: String, required: true, unique: true, index: true },
@@ -27,4 +28,14 @@ const ShareSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Share', ShareSchema);
+let Share;
+
+function getShareModel() {
+  if (!Share) {
+    const conn = getSocialDB();
+    Share = conn.model('Share', ShareSchema);
+  }
+  return Share;
+}
+
+module.exports = getShareModel;

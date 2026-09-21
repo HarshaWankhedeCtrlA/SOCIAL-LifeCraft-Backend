@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const { getSocialDB } = require('../config/db');
 const NotificationSchema = new mongoose.Schema({
   notificationId: { type: String, required: true, unique: true, index: true },
 
@@ -42,5 +42,14 @@ const NotificationSchema = new mongoose.Schema({
 
 NotificationSchema.index({ recipientId: 1, createdAt: -1 });
 NotificationSchema.index({ recipientId: 1, isRead: 1 });
+let Notification;
 
-module.exports = mongoose.model('Notification', NotificationSchema);
+function getNotificationModel() {
+  if (!Notification) {
+    const conn = getSocialDB();
+    Notification = conn.model('Notification', NotificationSchema);
+  }
+  return Notification;
+}
+
+module.exports = getNotificationModel;

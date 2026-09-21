@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const { getSocialDB } = require('../config/db');
 const PostSchema = new mongoose.Schema({
   // ============================================
   // ✅ CORE IDENTIFIERS
@@ -248,5 +248,13 @@ PostSchema.pre('save', function(next) {
   }
   next();
 });
+let Post;
 
-module.exports = mongoose.model('Post', PostSchema);
+function getPostModel() {
+  if (!Post) {
+    const conn = getSocialDB();
+    Post = conn.model('Post', PostSchema);
+  }
+  return Post;
+}
+module.exports = getPostModel;
