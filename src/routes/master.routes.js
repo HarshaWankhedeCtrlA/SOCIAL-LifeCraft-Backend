@@ -8,7 +8,7 @@ const reportReasonCtrl = require('../controllers/reportReason');
 const contentTypeCtrl = require('../controllers/contentType');
 const communityTypeCtrl = require('../controllers/communityType');
 const communityFilterOptionCtrl = require('../controllers/communityFilterOption');
-
+const categoryCtrl                = require('../controllers/category'); 
 // ==================== NOTIFICATION TYPES ====================
 router.get('/notification-types', notificationTypeCtrl.getAll);
 router.get('/notification-types/:code', notificationTypeCtrl.getByCode);
@@ -26,5 +26,9 @@ router.get('/community-types/:code', communityTypeCtrl.getByCode);
 // Community Filter Options
 router.get('/community-filter-options', communityFilterOptionCtrl.getAll);
 router.get('/community-filter-options/:code', communityFilterOptionCtrl.getByCode);
+
+// ==================== CATEGORIES ====================   
+router.get('/categories',     categoryCtrl.getAll);
+router.get('/categories/:code', categoryCtrl.getByCode);
 
 module.exports = router;

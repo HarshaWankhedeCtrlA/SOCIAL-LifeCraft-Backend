@@ -1,14 +1,14 @@
 const { v4: uuidv4 } = require('uuid');
-const { getUsersByIds } = require('../utils/authServiceClient'); 
-const getPostModel  = require('../models/Post');
-
+const { getUsersByIds } = require('../utils/authServiceClient');
+const getPostModel = require('../models/Post');
+const getCategoryModel = require('../models/master/Category');   // ✅ NEW
 
 async function attachAuthors(posts) {
   if (!posts || posts.length === 0) return posts;
-  
+
   const authorIds = posts.map(p => p.authorId).filter(Boolean);
   const authorsMap = await getUsersByIds(authorIds);
-  
+
   return posts.map(post => ({
     ...post,
     author: authorsMap[post.authorId]
@@ -23,25 +23,54 @@ async function attachAuthors(posts) {
   }));
 }
 
+// ✅ NEW helper — validates category against master, returns { valid, validCategories }
+async function validateCategory(category) {
+  if (!category) return { valid: true };   // null/undefined is allowed
+
+  const Category = getCategoryModel();
+  const exists = await Category.findOne({
+    code: String(category).toUpperCase(),
+    status: 'active'
+  }).lean();
+
+  if (exists) return { valid: true };
+
+  const all = await Category.find({ status: 'active' }).select('code -_id').lean();
+  return { valid: false, validCategories: all.map(c => c.code) };
+}
+
 // Create Post
 exports.createPost = async (req, res, next) => {
   try {
-    const Post = getPostModel(); 
-    const { 
-      communityId, 
-      title, 
-      content, 
-      contentType, 
-      visibility, 
+    const Post = getPostModel();
+    const {
+      communityId,
+      title,
+      content,
+      contentType,
+      visibility,
       tags,
       category,
-      media,         
-      coverImage,  
+      media,
+      coverImage,
       metadata,
       isPinned,
       isAnnouncement
     } = req.body;
     const authorId = req.user.id;
+
+    // ✅ Validate category against master
+    const catCheck = await validateCategory(category);
+    if (!catCheck.valid) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_CATEGORY',
+          message: `Category "${category}" is not valid`,
+          validCategories: catCheck.validCategories
+        }
+      });
+    }
 
     // Process tags
     let processedTags = tags || [];
@@ -54,12 +83,12 @@ exports.createPost = async (req, res, next) => {
         }
       });
     }
-   processedTags = processedTags
+    processedTags = processedTags
       .map(tag => tag.trim().toLowerCase())
       .filter(tag => tag.length > 0 && tag.length <= 30)
       .slice(0, 10);
 
-    // ✅ Process media (structured array from upload)
+    // Process media
     let processedMedia = media || [];
     if (!Array.isArray(processedMedia)) {
       processedMedia = [];
@@ -74,10 +103,8 @@ exports.createPost = async (req, res, next) => {
       });
     }
 
-    // ✅ Process coverImage
-    let processedCoverImage = coverImage || null;
+    const processedCoverImage = coverImage || null;
 
-    // Create post
     const post = new Post({
       postId: uuidv4(),
       communityId,
@@ -87,9 +114,9 @@ exports.createPost = async (req, res, next) => {
       contentType: contentType || 'text',
       visibility: visibility || 'public',
       tags: processedTags,
-      category: category || null,
-     media: processedMedia,  
-      coverImage: coverImage || null,
+      category: category ? String(category).toUpperCase() : null,   // ✅ normalize case
+      media: processedMedia,
+      coverImage: processedCoverImage,
       metadata: metadata || {},
       isPinned: isPinned || false,
       isAnnouncement: isAnnouncement || false,
@@ -111,25 +138,25 @@ exports.createPost = async (req, res, next) => {
 // Get Posts
 exports.getPosts = async (req, res, next) => {
   try {
-    const Post = getPostModel(); 
-    const { 
-      communityId, 
-      authorId, 
-      tag, 
-      category, 
+    const Post = getPostModel();
+    const {
+      communityId,
+      authorId,
+      tag,
+      category,
       contentType,
       status,
       search,
-      page = 1, 
-      pageSize = 20, 
-      sort = 'newest' 
+      page = 1,
+      pageSize = 20,
+      sort = 'newest'
     } = req.query;
 
     const query = { status: 'published' };
     if (communityId) query.communityId = communityId;
     if (authorId) query.authorId = authorId;
     if (tag) query.tags = { $in: [tag.toLowerCase()] };
-    if (category) query.category = category;
+    if (category) query.category = String(category).toUpperCase();   // ✅ normalize for consistent queries
     if (contentType) query.contentType = contentType;
     if (status) query.status = status;
 
@@ -145,14 +172,11 @@ exports.getPosts = async (req, res, next) => {
     const limit = parseInt(pageSize);
 
     const [posts, total] = await Promise.all([
-      Post.find(query)
-        .sort(sortOption)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      Post.find(query).sort(sortOption).skip(skip).limit(limit).lean(),
       Post.countDocuments(query)
     ]);
-const items = await attachAuthors(posts);
+    const items = await attachAuthors(posts);
+
     res.json({
       success: true,
       data: {
@@ -171,7 +195,7 @@ const items = await attachAuthors(posts);
 // Get Single Post
 exports.getPost = async (req, res, next) => {
   try {
-    const Post = getPostModel(); 
+    const Post = getPostModel();
     const { id } = req.params;
     const post = await Post.findOne({ postId: id });
     if (!post) {
@@ -199,28 +223,22 @@ exports.getPost = async (req, res, next) => {
 // Update Post
 exports.updatePost = async (req, res, next) => {
   try {
-    const Post = getPostModel(); 
+    const Post = getPostModel();
     const { id } = req.params;
-    const { title, content, tags, category, visibility, isPinned, isAnnouncement , media,
-    coverImage    } = req.body;
+    const {
+      title, content, tags, category, visibility,
+      isPinned, isAnnouncement, media, coverImage
+    } = req.body;
     const userId = req.user.id;
 
     const post = await Post.findOne({ postId: id });
     if (!post) {
       return res.status(404).json({
         success: false,
-        error: {
-          code: 'POST_NOT_FOUND',
-          message: 'Post not found'
-        }
+        error: { code: 'POST_NOT_FOUND', message: 'Post not found' }
       });
     }
- if (media !== undefined) {
-    updates.media = Array.isArray(media) ? media : [];
-  }
-  if (coverImage !== undefined) {
-    updates.coverImage = coverImage;
-  }
+
     if (post.authorId !== userId) {
       return res.status(403).json({
         success: false,
@@ -231,14 +249,34 @@ exports.updatePost = async (req, res, next) => {
       });
     }
 
+    // ✅ Validate category if being changed
+    if (category !== undefined && category !== null) {
+      const catCheck = await validateCategory(category);
+      if (!catCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_CATEGORY',
+            message: `Category "${category}" is not valid`,
+            validCategories: catCheck.validCategories
+          }
+        });
+      }
+    }
+
+    // ✅ BUG FIX: `updates` must be declared BEFORE any assignment
     const updates = {};
     if (title !== undefined) updates.title = title;
     if (content !== undefined) updates.content = content;
     if (tags !== undefined) updates.tags = tags;
-    if (category !== undefined) updates.category = category;
+    if (category !== undefined) {
+      updates.category = category ? String(category).toUpperCase() : null;
+    }
     if (visibility !== undefined) updates.visibility = visibility;
     if (isPinned !== undefined) updates.isPinned = isPinned;
     if (isAnnouncement !== undefined) updates.isAnnouncement = isAnnouncement;
+    if (media !== undefined) updates.media = Array.isArray(media) ? media : [];
+    if (coverImage !== undefined) updates.coverImage = coverImage;
 
     await Post.updateOne({ _id: post._id }, { $set: updates });
     const updatedPost = await Post.findOne({ postId: id });
@@ -256,11 +294,10 @@ exports.updatePost = async (req, res, next) => {
 // Delete Post
 exports.deletePost = async (req, res, next) => {
   try {
-    const Post = getPostModel(); 
+    const Post = getPostModel();
     const { id } = req.params;
     const userId = req.user.id;
 
-    // Find the post
     const post = await Post.findOne({ postId: id });
     if (!post) {
       return res.status(404).json({
@@ -272,7 +309,6 @@ exports.deletePost = async (req, res, next) => {
       });
     }
 
-    // Check if user is the author
     if (post.authorId !== userId) {
       return res.status(403).json({
         success: false,
@@ -283,7 +319,6 @@ exports.deletePost = async (req, res, next) => {
       });
     }
 
-    
     await Post.deleteOne({ _id: post._id });
 
     res.status(204).send();
